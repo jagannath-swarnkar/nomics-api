@@ -26,7 +26,9 @@ export class CustomizedTables extends Component {
   }
   selectHandler = e => {
     this.setState({ status: e.target.value });
-    this.setState({ data: this.props.tableData[e.target.value] });
+    if (typeof this.props.tableData[e.target.value] === "object") {
+       this.setState({ data: this.props.tableData[e.target.value] });
+    }
   };
 
   dropdown = () => {
