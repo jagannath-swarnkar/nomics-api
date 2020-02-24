@@ -45,53 +45,66 @@ knex.schema.hasTable("curiencies_data").then(function(exists) {
   }
 });
 
-app.get("/", function(req, res) {
-  console.log(req.query.pageSize)
-  knex("curiencies_data")
-    .where("id", "<=", (req.query.pageSize || 10))
+
+const getDataFromDB = pageSize => {
+  return knex("curiencies_data")
+    .where("id", "<=", pageSize || 10)
     .then(mainData => {
-      res.json(mainData);
+      return mainData;
     })
     .catch(err => console.error(err));
-});
+};
 
-app.get("/post", function(request, response) {
-  axios
-    .get(
-      "https://api.nomics.com/v1/currencies?key=7f8f43ac3ad7a4fd882ba8e0562d2f82"
-    )
-    .then(resp => {
-      for (i of resp.data) {
-        console.log(i.name)
-        knex("curiencies_data")
-          .insert({
-            original_symbol: i.original_symbol,
-            name: i.name,
-            description: i.description,
-            website_url: i.website_url,
-            logo_url: i.logo_url,
-            blog_url: i.blog_url,
-            discord_url: i.discord_url,
-            facebook_url: i.facebook_url,
-            github_url: i.github_url,
-            medium_url: i.medium_url,
-            reddit_url: i.reddit_url,
-            telegram_url: i.telegram_url,
-            twitter_url: i.twitter_url,
-            youtube_url: i.youtube_url
-          })
-          .then(data1 => {
-            console.log("data inserted into db");
-            response.json('data updated')
-          })
-          .catch(err => console.error(err));
-      }
-
-      response.json(resp.data);
-    })
-    .catch(err => {
-      console.log("Error fetching data from nomics", err);
-    });
+app.get("/", function(request, response) {
+  let getdata = new Promise((resolve, reject) => {
+    resolve(getDataFromDB(request.query.pageSize));
+  })
+  getdata.then(data => {
+    if (data.length > 0) {
+      response.json(data);
+    } else {
+      axios
+        .get(
+          "https://api.nomics.com/v1/currencies?key=7f8f43ac3ad7a4fd882ba8e0562d2f82"
+        )
+        .then(resp => {
+          for (i of resp.data) {
+            console.log(i.name);
+            knex("curiencies_data")
+              .insert({
+                original_symbol: i.original_symbol,
+                name: i.name,
+                description: i.description,
+                website_url: i.website_url,
+                logo_url: i.logo_url,
+                blog_url: i.blog_url,
+                discord_url: i.discord_url,
+                facebook_url: i.facebook_url,
+                github_url: i.github_url,
+                medium_url: i.medium_url,
+                reddit_url: i.reddit_url,
+                telegram_url: i.telegram_url,
+                twitter_url: i.twitter_url,
+                youtube_url: i.youtube_url
+              })
+              .then(data1 => {
+                let get_inserted_data = new Promise((resolve, reject) => {
+                  resolve(getDataFromDB(request.query.pageSize));
+                })
+                get_inserted_data.then(insertedData => {
+                  response.json(insertedData);
+                })
+                get_inserted_data.catch(err=>console.error(err))
+              })
+              .catch(err => console.error(err));
+          }
+        })
+        .catch(err => {
+          console.log("Error fetching data from nomics", err);
+        });
+    }
+  })
+  getdata.catch(err=>console.error(err))
 });
 
 app.listen((PORT = 8001), err => {
